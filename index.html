@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>NEON FLIPPER</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --neon-orange: #ff6b2c;
+      --neon-cyan: #00f5d4;
+      --neon-pink: #ff2d95;
+      --neon-purple: #9b5cff;
+      --bg-deep: #05050c;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: var(--bg-deep);
+      color: #e8e8f0;
+      font-family: 'Rajdhani', system-ui, sans-serif;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: 10px;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255,107,44,0.18), transparent),
+        radial-gradient(ellipse 60% 40% at 80% 100%, rgba(155,92,255,0.12), transparent),
+        var(--bg-deep);
+    }
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 1.55rem;
+      letter-spacing: 6px;
+      background: linear-gradient(90deg, #ff6b2c, #ff2d95, #00f5d4);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      text-shadow: 0 0 30px rgba(255,107,44,0.4);
+      margin-bottom: 6px;
+    }
+    #hud {
+      display: flex;
+      gap: 36px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+    #hud .val {
+      color: var(--neon-cyan);
+      text-shadow: 0 0 12px rgba(0,245,212,0.6);
+      min-width: 48px;
+      display: inline-block;
+    }
+    #game-wrap {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow:
+        0 0 0 1px rgba(255,107,44,0.35),
+        0 0 40px rgba(255,107,44,0.15),
+        0 0 80px rgba(155,92,255,0.08),
+        inset 0 0 60px rgba(0,0,0,0.5);
+    }
+    canvas {
+      display: block;
+      background: #07070f;
+    }
+    #overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(5,5,12,0.92);
+      backdrop-filter: blur(6px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 30;
+      text-align: center;
+      padding: 24px;
+    }
+    #overlay.hidden { display: none !important; }
+    #overlay h2 {
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 900;
+      font-size: 1.9rem;
+      letter-spacing: 3px;
+      background: linear-gradient(90deg, #ff6b2c, #ff2d95);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 14px;
+    }
+    #overlay p {
+      margin: 5px 0;
+      opacity: 0.85;
+      font-size: 1rem;
+      max-width: 280px;
+      line-height: 1.45;
+    }
+    #startBtn {
+      margin-top: 26px;
+      padding: 14px 42px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      background: linear-gradient(135deg, #ff6b2c, #ff2d95);
+      color: #0a0a12;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 0 30px rgba(255,107,44,0.45);
+      transition: transform 0.12s, box-shadow 0.12s;
+    }
+    #startBtn:hover {
+      transform: scale(1.04);
+      box-shadow: 0 0 45px rgba(255,107,44,0.65);
+    }
+    #startBtn:active { transform: scale(0.97); }
+    #help {
+      margin-top: 12px;
+      font-size: 0.82rem;
+      opacity: 0.65;
+      text-align: center;
+      max-width: 440px;
+      letter-spacing: 0.5px;
+    }
+    kbd {
+      background: rgba(255,255,255,0.08);
+      padding: 2px 7px;
+      border-radius: 4px;
+      border: 1px solid rgba(255,255,255,0.15);
+      font-family: 'Orbitron', monospace;
+      font-size: 0.75rem;
+    }
+    #mobile {
+      display: none;
+      position: fixed;
+      bottom: 18px;
+      left: 0; right: 0;
+      justify-content: space-evenly;
+      z-index: 40;
+      pointer-events: none;
+    }
+    #mobile button {
+      pointer-events: auto;
+      width: 86px;
+      height: 86px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.15);
+      background: linear-gradient(145deg, #ff2d55, #c41e3a);
+      color: white;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      font-size: 0.7rem;
+      letter-spacing: 1px;
+      box-shadow: 0 6px 25px rgba(255,45,85,0.4);
+    }
+    #mobile #mLaunch {
+      background: linear-gradient(145deg, #9b5cff, #6b3fa0);
+      box-shadow: 0 6px 25px rgba(155,92,255,0.45);
+    }
+    @media (max-width: 600px), (pointer: coarse) {
+      #mobile { display: flex; }
+      body { padding-bottom: 115px; }
+      #help { display: none; }
+      h1 { font-size: 1.25rem; letter-spacing: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>NEON FLIPPER</h1>
+  <div id="hud">
+    <div>SCORE <span class="val" id="score">0</span></div>
+    <div>BALLS <span class="val" id="balls">3</span></div>
+    <div>BEST <span class="val" id="high">0</span></div>
+  </div>
+
+  <div id="game-wrap">
+    <div id="overlay">
+      <h2>NEON FLIPPER</h2>
+      <p>Tieni premuto <kbd>SPAZIO</kbd> per caricare il plunger, poi rilascia per lanciare la pallina nel campo.</p>
+      <p>Flipper: <kbd>Z</kbd> / <kbd>←</kbd> &nbsp;e&nbsp; <kbd>X</kbd> / <kbd>→</kbd></p>
+      <button id="startBtn">INIZIA</button>
+    </div>
+  </div>
+
+  <div id="help">
+    <kbd>Z</kbd> <kbd>←</kbd> Sinistro &nbsp;·&nbsp;
+    <kbd>X</kbd> <kbd>→</kbd> Destro &nbsp;·&nbsp;
+    <kbd>Spazio</kbd> Plunger (tieni premuto)
+  </div>
+
+  <div id="mobile">
+    <button id="mLeft">LEFT</button>
+    <button id="mLaunch">LAUNCH</button>
+    <button id="mRight">RIGHT</button>
+  </div>
+
+  <script>
+  (function () {
+    const W = 440, H = 720;
+    const BALL_R = 10.5;
+
+    const C = {
+      bg:          '#07070f',
+      wall:        '#1a1a2e',
+      wallEdge:    '#2a2a45',
+      bumper:      '#ff6b2c',
+      bumperCore:  '#ff9f6b',
+      bumperLit:   '#ffe0c2',
+      flipper:     '#ff2d55',
+      flipperEdge: '#ff6b8a',
+      ball:        '#e8f0ff',
+      ballGlow:    '#a0c4ff',
+      sling:       '#00f5d4',
+      plunger:     '#9b5cff',
+      lane:        '#12121f',
+      guide:       '#2d2d4a'
+    };
+
+    let engine, world, render, runner;
+    let ball, leftFlip, rightFlip, plunger;
+    let score = 0, ballsLeft = 3, highScore = 0;
+    let started = false, inPlay = false, charging = false, power = 0;
+    let leftDown = false, rightDown = false;
+
+    const $score = document.getElementById('score');
+    const $balls = document.getElementById('balls');
+    const $high  = document.getElementById('high');
+    const $overlay = document.getElementById('overlay');
+    const $wrap = document.getElementById('game-wrap');
+
+    try {
+      highScore = parseInt(localStorage.getItem('neonFlipHigh') || '0', 10);
+      $high.textContent = highScore;
+    } catch (e) {}
+
+    function init() {
+      if (typeof Matter === 'undefined') {
+        $overlay.innerHTML = '<h2>Errore</h2><p>Matter.js non caricato.<br>Serve connessione internet.</p>';
+        return;
+      }
+
+      engine = Matter.Engine.create();
+      world = engine.world;
+      world.gravity.y = 1.15;
+
+      render = Matter.Render.create({
+        element: $wrap,
+        engine: engine,
+        options: {
+          width: W,
+          height: H,
+          wireframes: false,
+          background: C.bg,
+          pixelRatio: Math.min(window.devicePixelRatio || 1, 2)
+        }
+      });
+      Matter.Render.run(render);
+      runner = Matter.Runner.create();
+      Matter.Runner.run(runner, engine);
+
+      Matter.Events.on(render, 'afterRender', afterRender);
+
+      buildPlayfield();
+      buildFlippers();
+      buildPlunger();
+      buildBumpers();
+      buildSlingshots();
+      buildDrain();
+
+      Matter.Events.on(engine, 'collisionStart', onCollide);
+      Matter.Events.on(engine, 'beforeUpdate', beforeUpdate);
+
+      spawnReady();
+      setupInput();
+    }
+
+    function wall(x, y, w, h, angle, opts) {
+      return Matter.Bodies.rectangle(x, y, w, h, Object.assign({
+        isStatic: true,
+        angle: angle || 0,
+        restitution: 0.5,
+        friction: 0.06,
+        render: { fillStyle: C.wall, strokeStyle: C.wallEdge, lineWidth: 1 }
+      }, opts || {}));
+    }
+
+    function buildPlayfield() {
+      const bodies = [];
+
+      // Outer frame
+      bodies.push(wall(W/2, -12, W + 50, 28));
+      bodies.push(wall(-12, H/2, 28, H + 50));
+      bodies.push(wall(W + 12, H/2, 28, H + 50));
+
+      // Bottom aprons
+      bodies.push(wall(70, H - 18, 140, 22));
+      bodies.push(wall(W - 70, H - 18, 140, 22));
+
+      // RIGHT PLUNGER LANE - left wall of the channel
+      bodies.push(wall(W - 52, 390, 10, 380));
+
+      // TOP EXIT of the lane - this is the critical part!
+      // Angled ramp that kicks the ball LEFT into the main playfield
+      bodies.push(wall(W - 38, 115, 10, 55, -0.55));
+      bodies.push(wall(W - 22, 85,  38, 10, 0));
+
+      // Upper guides
+      bodies.push(wall(55, 140, 12, 110, 0.42));
+      bodies.push(wall(W - 95, 145, 12, 95, -0.38));
+
+      // Mid guides near flippers
+      bodies.push(wall(78, 555, 11, 95, 0.48));
+      bodies.push(wall(W - 78, 555, 11, 95, -0.48));
+
+      // Top bar
+      bodies.push(wall(W/2 - 20, 48, 180, 12));
+
+      Matter.World.add(world, bodies);
+    }
+
+    function buildFlippers() {
+      leftFlip = Matter.Bodies.rectangle(128, 625, 92, 18, {
+        isStatic: true,
+        restitution: 0.25,
+        friction: 0.04,
+        chamfer: { radius: 8 },
+        label: 'flipper',
+        render: { fillStyle: C.flipper, strokeStyle: C.flipperEdge, lineWidth: 2 }
+      });
+      rightFlip = Matter.Bodies.rectangle(W - 128, 625, 92, 18, {
+        isStatic: true,
+        restitution: 0.25,
+        friction: 0.04,
+        chamfer: { radius: 8 },
+        label: 'flipper',
+        render: { fillStyle: C.flipper, strokeStyle: C.flipperEdge, lineWidth: 2 }
+      });
+      Matter.Body.setAngle(leftFlip, 0.52);
+      Matter.Body.setAngle(rightFlip, -0.52);
+      Matter.World.add(world, [leftFlip, rightFlip]);
+    }
+
+    function buildPlunger() {
+      plunger = Matter.Bodies.rectangle(W - 28, 610, 24, 80, {
+        isStatic: true,
+        restitution: 1.15,
+        label: 'plunger',
+        render: { fillStyle: C.plunger, strokeStyle: '#c4a0ff', lineWidth: 1 }
+      });
+      Matter.World.add(world, plunger);
+    }
+
+    function buildBumpers() {
+      const positions = [
+        [155, 210], [220, 165], [285, 210],
+        [175, 300], [265, 300],
+        [220, 385]
+      ];
+      positions.forEach(([x, y]) => {
+        const outer = Matter.Bodies.circle(x, y, 27, {
+          isStatic: true,
+          restitution: 1.55,
+          friction: 0.01,
+          label: 'bumper',
+          render: { fillStyle: C.bumper, strokeStyle: C.bumperCore, lineWidth: 3 }
+        });
+        outer._lit = 0;
+        Matter.World.add(world, outer);
+      });
+    }
+
+    function buildSlingshots() {
+      Matter.World.add(world, [
+        Matter.Bodies.trapezoid(78, 510, 62, 48, 0.32, {
+          isStatic: true, angle: 0.38, restitution: 1.4, label: 'sling',
+          render: { fillStyle: C.sling, strokeStyle: '#7dffe8', lineWidth: 2 }
+        }),
+        Matter.Bodies.trapezoid(W - 78, 510, 62, 48, 0.32, {
+          isStatic: true, angle: -0.38, restitution: 1.4, label: 'sling',
+          render: { fillStyle: C.sling, strokeStyle: '#7dffe8', lineWidth: 2 }
+        })
+      ]);
+    }
+
+    function buildDrain() {
+      Matter.World.add(world, Matter.Bodies.rectangle(W/2, H + 30, 150, 40, {
+        isStatic: true, isSensor: true, label: 'drain',
+        render: { visible: false }
+      }));
+    }
+
+    function spawnReady() {
+      if (ball) Matter.World.remove(world, ball);
+      ball = Matter.Bodies.circle(W - 28, 545, BALL_R, {
+        restitution: 0.68,
+        friction: 0.015,
+        frictionAir: 0.0012,
+        density: 0.0022,
+        label: 'ball',
+        render: {
+          fillStyle: C.ball,
+          strokeStyle: C.ballGlow,
+          lineWidth: 2
+        }
+      });
+      Matter.Body.setStatic(ball, true);
+      Matter.World.add(world, ball);
+      inPlay = false;
+      charging = false;
+      power = 0;
+      Matter.Body.setPosition(plunger, { x: W - 28, y: 610 });
+    }
+
+    function launch() {
+      if (inPlay || ballsLeft <= 0 || !started) return;
+      Matter.Body.setStatic(ball, false);
+
+      // Strong shot so the ball reaches the top EXIT of the lane
+      const strength = 19 + power * 18;
+      Matter.Body.setVelocity(ball, {
+        x: -0.4 + (Math.random() - 0.5) * 0.6,
+        y: -strength
+      });
+      Matter.Body.setAngularVelocity(ball, 0);
+
+      inPlay = true;
+      charging = false;
+      power = 0;
+      Matter.Body.setPosition(plunger, { x: W - 28, y: 610 });
+    }
+
+    function loseBall() {
+      if (!inPlay) return;
+      inPlay = false;
+      ballsLeft--;
+      $balls.textContent = ballsLeft;
+      if (ballsLeft <= 0) {
+        gameOver();
+      } else {
+        setTimeout(spawnReady, 750);
+      }
+    }
+
+    function gameOver() {
+      try {
+        if (score > highScore) {
+          highScore = score;
+          localStorage.setItem('neonFlipHigh', highScore);
+          $high.textContent = highScore;
+        }
+      } catch (e) {}
+      $overlay.innerHTML = `
+        <h2>GAME OVER</h2>
+        <p style="font-size:1.25rem;margin:12px 0">SCORE <b style="color:#00f5d4">${score}</b></p>
+        <p>BEST ${highScore}</p>
+        <button id="startBtn">RIGIOCA</button>
+      `;
+      $overlay.classList.remove('hidden');
+      started = false;
+      document.getElementById('startBtn').onclick = startGame;
+    }
+
+    function startGame() {
+      score = 0;
+      ballsLeft = 3;
+      $score.textContent = '0';
+      $balls.textContent = '3';
+      $overlay.classList.add('hidden');
+      started = true;
+      spawnReady();
+    }
+
+    function beforeUpdate() {
+      const restL = 0.52, upL = -0.50;
+      const restR = -0.52, upR = 0.50;
+
+      Matter.Body.setAngle(leftFlip,  leftDown  ? upL : restL);
+      Matter.Body.setAngle(rightFlip, rightDown ? upR : restR);
+
+      Matter.Body.setPosition(leftFlip,  { x: 128, y: 625 });
+      Matter.Body.setPosition(rightFlip, { x: W - 128, y: 625 });
+      Matter.Body.setVelocity(leftFlip,  { x: 0, y: 0 });
+      Matter.Body.setVelocity(rightFlip, { x: 0, y: 0 });
+      Matter.Body.setAngularVelocity(leftFlip,  0);
+      Matter.Body.setAngularVelocity(rightFlip, 0);
+
+      if (charging && !inPlay) {
+        power = Math.min(power + 0.028, 1);
+        const y = 610 + power * 70;
+        Matter.Body.setPosition(plunger, { x: W - 28, y: y });
+        if (ball && ball.isStatic) {
+          Matter.Body.setPosition(ball, { x: W - 28, y: y - 52 });
+        }
+      }
+
+      for (const b of world.bodies) {
+        if (b.label === 'bumper' && b._lit > 0) {
+          b._lit -= 0.045;
+          b.render.fillStyle = b._lit > 0 ? C.bumperLit : C.bumper;
+          b.render.strokeStyle = b._lit > 0 ? '#fff' : C.bumperCore;
+        }
+      }
+
+      if (ball && !ball.isStatic) {
+        const v = ball.velocity;
+        const s = Math.hypot(v.x, v.y);
+        if (s > 27) {
+          Matter.Body.setVelocity(ball, { x: v.x * 27 / s, y: v.y * 27 / s });
+        }
+      }
+    }
+
+    function onCollide(ev) {
+      for (const p of ev.pairs) {
+        let b = null, o = null;
+        if (p.bodyA.label === 'ball') { b = p.bodyA; o = p.bodyB; }
+        else if (p.bodyB.label === 'ball') { b = p.bodyB; o = p.bodyA; }
+        if (!b) continue;
+
+        if (o.label === 'bumper') {
+          score += 100;
+          $score.textContent = score;
+          o._lit = 1.0;
+          o.render.fillStyle = C.bumperLit;
+          const dx = b.position.x - o.position.x;
+          const dy = b.position.y - o.position.y;
+          const d = Math.hypot(dx, dy) || 1;
+          Matter.Body.setVelocity(b, {
+            x: b.velocity.x + (dx / d) * 3.8,
+            y: b.velocity.y + (dy / d) * 3.8
+          });
+        } else if (o.label === 'sling') {
+          score += 50;
+          $score.textContent = score;
+        } else if (o.label === 'drain') {
+          loseBall();
+        }
+      }
+    }
+
+    function afterRender() {
+      const ctx = render.context;
+      if (!ctx) return;
+
+      if (ball && !ball.isStatic) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(ball.position.x, ball.position.y, BALL_R + 6, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(160,196,255,0.18)';
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,107,44,0.25)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(30, 8);
+      ctx.lineTo(W - 30, 8);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function setupInput() {
+      document.getElementById('startBtn').onclick = startGame;
+
+      window.addEventListener('keydown', e => {
+        if (!started) {
+          if (e.code === 'Space' || e.code === 'Enter') {
+            startGame();
+            e.preventDefault();
+          }
+          return;
+        }
+        if (e.code === 'ArrowLeft' || e.code === 'KeyZ' || e.code === 'KeyA') {
+          leftDown = true; e.preventDefault();
+        }
+        if (e.code === 'ArrowRight' || e.code === 'KeyX' || e.code === 'KeyD') {
+          rightDown = true; e.preventDefault();
+        }
+        if (e.code === 'Space') {
+          if (!inPlay) charging = true;
+          e.preventDefault();
+        }
+      });
+
+      window.addEventListener('keyup', e => {
+        if (e.code === 'ArrowLeft' || e.code === 'KeyZ' || e.code === 'KeyA') leftDown = false;
+        if (e.code === 'ArrowRight' || e.code === 'KeyX' || e.code === 'KeyD') rightDown = false;
+        if (e.code === 'Space') {
+          if (charging) launch();
+          charging = false;
+        }
+      });
+
+      const bind = (el, down, up) => {
+        el.addEventListener('touchstart', e => { e.preventDefault(); down(); }, { passive: false });
+        el.addEventListener('touchend',   e => { e.preventDefault(); up(); }, { passive: false });
+        el.addEventListener('mousedown',  e => { e.preventDefault(); down(); });
+        el.addEventListener('mouseup',    e => { e.preventDefault(); up(); });
+        el.addEventListener('mouseleave', up);
+      };
+      bind(document.getElementById('mLeft'),  () => leftDown = true,  () => leftDown = false);
+      bind(document.getElementById('mRight'), () => rightDown = true, () => rightDown = false);
+      bind(document.getElementById('mLaunch'), () => {
+        if (!started) { startGame(); return; }
+        if (!inPlay) charging = true;
+      }, () => {
+        if (charging) launch();
+        charging = false;
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  })();
+  </script>
+</body>
+</html>
