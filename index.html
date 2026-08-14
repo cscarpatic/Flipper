@@ -309,28 +309,35 @@
       bodies.push(wall(-12, H/2, 28, H + 50));
       bodies.push(wall(W + 12, H/2, 28, H + 50));
 
-      // Bottom aprons
+      // Bottom aprons (leave center drain open)
       bodies.push(wall(70, H - 18, 140, 22));
       bodies.push(wall(W - 70, H - 18, 140, 22));
 
-      // RIGHT PLUNGER LANE - left wall of the channel
-      bodies.push(wall(W - 52, 390, 10, 380));
+      // ========== RIGHT PLUNGER LANE ==========
+      // The lane wall MUST end low enough so the ball can exit LEFT
+      // at the top of the channel into the main playfield.
 
-      // TOP EXIT of the lane - this is the critical part!
-      // Angled ramp that kicks the ball LEFT into the main playfield
-      bodies.push(wall(W - 38, 115, 10, 55, -0.55));
-      bodies.push(wall(W - 22, 85,  38, 10, 0));
+      // Vertical wall of the lane (stops around y=250)
+      bodies.push(wall(W - 54, 470, 11, 320));   // main channel wall
 
-      // Upper guides
-      bodies.push(wall(55, 140, 12, 110, 0.42));
-      bodies.push(wall(W - 95, 145, 12, 95, -0.38));
+      // Exit ramp: strong leftward slope at the top of the lane
+      // This is the key piece that forces the ball into the table
+      bodies.push(wall(W - 70, 230, 14, 90, -0.72));  // main exit ramp
+      bodies.push(wall(W - 95, 175, 12, 55, -0.55));  // upper continuation of ramp
+
+      // Small ceiling of the lane so the ball doesn't fly out the top-right
+      bodies.push(wall(W - 25, 95, 50, 12));
+
+      // ========== UPPER GUIDES ==========
+      bodies.push(wall(50, 145, 12, 115, 0.40));
+      bodies.push(wall(W - 130, 155, 12, 90, -0.35));
 
       // Mid guides near flippers
       bodies.push(wall(78, 555, 11, 95, 0.48));
       bodies.push(wall(W - 78, 555, 11, 95, -0.48));
 
-      // Top bar
-      bodies.push(wall(W/2 - 20, 48, 180, 12));
+      // Top decorative bar
+      bodies.push(wall(W/2 - 30, 48, 200, 12));
 
       Matter.World.add(world, bodies);
     }
@@ -432,10 +439,11 @@
       if (inPlay || ballsLeft <= 0 || !started) return;
       Matter.Body.setStatic(ball, false);
 
-      // Strong shot so the ball reaches the top EXIT of the lane
-      const strength = 19 + power * 18;
+      // Strong upward + slight left push so the ball hits the exit ramp
+      // and enters the main playfield
+      const strength = 22 + power * 20;
       Matter.Body.setVelocity(ball, {
-        x: -0.4 + (Math.random() - 0.5) * 0.6,
+        x: -1.8 + (Math.random() - 0.5) * 0.8,   // leftward bias
         y: -strength
       });
       Matter.Body.setAngularVelocity(ball, 0);
